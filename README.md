@@ -1,8 +1,13 @@
 # DockerScript
 
-Embed your project files into single existing Dockerfile file with respect to .dockerignore
+Embed your project files into single existing Dockerfile file with respect to .dockerignore & GZIP compression support
 
 Inspired by @adtac's [Gist](https://gist.github.com/adtac/595b5823ef73b329167b815757bbce9f)
+
+## Features
+
+- [x] .dockerignore support
+- [x] GZIP Compression Support
 
 ## How to run
 

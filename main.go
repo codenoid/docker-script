@@ -45,7 +45,7 @@ func main() {
 }
 
 func writeShebang(file *os.File) {
-	fmt.Fprintln(file, `#!/usr/bin/env -S bash -c "docker run -p 8080:8080 -it --rm \$(docker build --progress plain -f \$0 . 2>&1 | tee /dev/stderr | grep -oP 'sha256:[0-9a-f]')"`)
+	fmt.Fprintln(file, `#!/usr/bin/env -S bash -c "docker run --network host -it --rm \$(docker build --progress plain -f \$0 . 2>&1 | tee /dev/stderr | grep -oP 'sha256:[0-9a-f]')"`)
 }
 
 func copyDockerfileContent(originalFile *os.File, newFile *os.File) {

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	ignore "github.com/sabhiram/go-gitignore"
 )
@@ -38,8 +39,7 @@ func main() {
 	defer newFile.Close()
 
 	writeShebang(newFile)
-	copyDockerfileContent(file, newFile)
-	embedProjectFiles(*dockerfilePath, ignoredPatterns, newFile)
+	copyDockerfileContent(file, newFile, ignoredPatterns, *dockerfilePath)
 
 	fmt.Printf("Dockerfile.script created successfully in %s\n", *dockerfilePath)
 }
@@ -48,11 +48,28 @@ func writeShebang(file *os.File) {
 	fmt.Fprintln(file, `#!/usr/bin/env -S bash -c "docker run --network host -it --rm \$(docker build --progress plain -f \$0 . 2>&1 | tee /dev/stderr | grep -oP 'sha256:[0-9a-f]')"`)
 }
 
-func copyDockerfileContent(originalFile *os.File, newFile *os.File) {
+func copyDockerfileContent(originalFile *os.File, newFile *os.File, ignorePattern *ignore.GitIgnore, directory string) error {
 	scanner := bufio.NewScanner(originalFile)
+	fromCopied := false
+
 	for scanner.Scan() {
-		fmt.Fprintln(newFile, scanner.Text())
+		line := scanner.Text()
+
+		// Write the line to the new file
+		if _, err := fmt.Fprintln(newFile, line); err != nil {
+			return err
+		}
+
+		// Check if the line is a FROM directive
+		if !fromCopied && strings.Contains(line, "FROM") {
+			fromCopied = true
+
+			// After copying FROM line, embed project files
+			embedProjectFiles(directory, ignorePattern, newFile)
+		}
 	}
+
+	return scanner.Err()
 }
 
 func embedProjectFiles(directory string, ignorePattern *ignore.GitIgnore, newFile *os.File) {
@@ -92,6 +109,7 @@ func embedProjectFiles(directory string, ignorePattern *ignore.GitIgnore, newFil
 
 		// Encode the compressed content to base64
 		encodedContent := base64.StdEncoding.EncodeToString(gzipBuffer.Bytes())
+		fmt.Fprintf(newFile, "RUN mkdir -p %s\n", getParentPath(relativePath))
 		fmt.Fprintf(newFile, "RUN echo '%s' | base64 -d | gunzip > %s\n", encodedContent, relativePath)
 
 		return nil
@@ -100,4 +118,15 @@ func embedProjectFiles(directory string, ignorePattern *ignore.GitIgnore, newFil
 	if err != nil {
 		fmt.Printf("Error embedding project files: %s\n", err)
 	}
+}
+
+func getParentPath(fullPath string) string {
+	// Clean the path to fix any irregularities
+	fullPath = filepath.Clean(fullPath)
+
+	// Split the path into directory and base
+	dir, _ := filepath.Split(fullPath)
+
+	// Clean the directory to remove the trailing slash
+	return filepath.Clean(dir)
 }

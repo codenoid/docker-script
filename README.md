@@ -19,3 +19,7 @@ docker-script -path .
 # run the generated Dockerfile
 ./Dockerfile.script
 ```
+
+## Is this ready for production?
+
+yeah yeah, it's ready, but you may need to test your Dockerfile.script first, you may want to change something

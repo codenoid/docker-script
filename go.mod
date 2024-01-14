@@ -1,4 +1,4 @@
-module github.com/codenoid/dockerscript
+module github.com/codenoid/docker-script
 
 go 1.21.5
 

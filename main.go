@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -52,8 +53,13 @@ func copyDockerfileContent(originalFile *os.File, newFile *os.File, ignorePatter
 	scanner := bufio.NewScanner(originalFile)
 	fromCopied := false
 
-	for scanner.Scan() {
-		line := scanner.Text()
+	startAfter := "FROM"
+	content, _ := io.ReadAll(originalFile)
+	if strings.Contains(string(content), "WORKDIR") {
+		startAfter = "WORKDIR"
+	}
+
+	for _, line := range strings.Split(string(content), "\n") {
 
 		// Write the line to the new file
 		if _, err := fmt.Fprintln(newFile, line); err != nil {
@@ -61,7 +67,7 @@ func copyDockerfileContent(originalFile *os.File, newFile *os.File, ignorePatter
 		}
 
 		// Check if the line is a FROM directive
-		if !fromCopied && strings.Contains(line, "FROM") {
+		if !fromCopied && strings.Contains(line, startAfter) {
 			fromCopied = true
 
 			// After copying FROM line, embed project files
@@ -110,6 +116,7 @@ func embedProjectFiles(directory string, ignorePattern *ignore.GitIgnore, newFil
 		// Encode the compressed content to base64
 		encodedContent := base64.StdEncoding.EncodeToString(gzipBuffer.Bytes())
 		fmt.Fprintf(newFile, "RUN mkdir -p %s\n", getParentPath(relativePath))
+		fmt.Fprintf(newFile, "RUN echo '%s' | base64 -d > %s\n", encodedContent, relativePath)
 		fmt.Fprintf(newFile, "RUN echo '%s' | base64 -d | gunzip > %s\n", encodedContent, relativePath)
 
 		return nil

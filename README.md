@@ -7,7 +7,7 @@ Inspired by @adtac's [Gist](https://gist.github.com/adtac/595b5823ef73b329167b81
 ## Features
 
 - [x] .dockerignore support
-- [x] GZIP Compression Support
+- [x] GZIP Compression Support (~80% Smaller!!!)
 
 ## How to run
 

@@ -52,14 +52,24 @@ func writeShebang(file *os.File) {
 func copyDockerfileContent(originalFile *os.File, newFile *os.File, ignorePattern *ignore.GitIgnore, directory string) error {
 	scanner := bufio.NewScanner(originalFile)
 	fromCopied := false
+	copyBefore := ""
 
-	startAfter := "FROM"
+	copyCmd := []string{"ADD", "COPY"}
 	content, _ := io.ReadAll(originalFile)
-	if strings.Contains(string(content), "WORKDIR") {
-		startAfter = "WORKDIR"
+	lines := strings.Split(string(content), "\n")
+
+	for _, line := range lines {
+		line = strings.ToUpper(strings.TrimSpace(line))
+		for _, cmd := range copyCmd {
+			if strings.HasPrefix(line, cmd) {
+				copyBefore = cmd
+				goto APPEND
+			}
+		}
 	}
 
-	for _, line := range strings.Split(string(content), "\n") {
+APPEND:
+	for i, line := range lines {
 
 		// Write the line to the new file
 		if _, err := fmt.Fprintln(newFile, line); err != nil {
@@ -67,11 +77,13 @@ func copyDockerfileContent(originalFile *os.File, newFile *os.File, ignorePatter
 		}
 
 		// Check if the line is a FROM directive
-		if !fromCopied && strings.Contains(line, startAfter) {
-			fromCopied = true
+		if !fromCopied && copyBefore != "" {
+			if len(lines) > i+1 && strings.Contains(lines[i+1], copyBefore) {
+				fromCopied = true
 
-			// After copying FROM line, embed project files
-			embedProjectFiles(directory, ignorePattern, newFile)
+				// After copying FROM line, embed project files
+				embedProjectFiles(directory, ignorePattern, newFile)
+			}
 		}
 	}
 

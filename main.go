@@ -128,7 +128,6 @@ func embedProjectFiles(directory string, ignorePattern *ignore.GitIgnore, newFil
 		// Encode the compressed content to base64
 		encodedContent := base64.StdEncoding.EncodeToString(gzipBuffer.Bytes())
 		fmt.Fprintf(newFile, "RUN mkdir -p %s\n", getParentPath(relativePath))
-		fmt.Fprintf(newFile, "RUN echo '%s' | base64 -d > %s\n", encodedContent, relativePath)
 		fmt.Fprintf(newFile, "RUN echo '%s' | base64 -d | gunzip > %s\n", encodedContent, relativePath)
 
 		return nil

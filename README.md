@@ -1,5 +1,7 @@
 # DockerScript
 
+![production ready](https://img.shields.io/badge/Project%20Stage-Production%20Ready-brightgreen.svg)
+
 Embed your project files into single existing Dockerfile file with respect to .dockerignore & GZIP compression support
 
 Inspired by @adtac's [Gist](https://gist.github.com/adtac/595b5823ef73b329167b815757bbce9f)

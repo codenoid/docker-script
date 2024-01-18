@@ -22,7 +22,10 @@ func main() {
 	fullDockerfilePath := filepath.Join(*dockerfilePath, "Dockerfile")
 	dockerignorePath := filepath.Join(*dockerfilePath, ".dockerignore")
 
-	ignoredPatterns, _ := ignore.CompileIgnoreFile(dockerignorePath)
+	ignoredPatterns := ignore.CompileIgnoreLines()
+	if pathfile, err := os.Stat(fullDockerfilePath); os.IsExist(err) || !pathfile.IsDir() {
+		ignoredPatterns, _ = ignore.CompileIgnoreFile(dockerignorePath)
+	}
 
 	file, err := os.Open(fullDockerfilePath)
 	if err != nil {

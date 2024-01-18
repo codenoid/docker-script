@@ -26,12 +26,12 @@ func main() {
 	gitignorePath := filepath.Join(*dockerfilePath, ".gitignore")
 	dockerignorePath := filepath.Join(*dockerfilePath, ".dockerignore")
 
-	if pathfile, err := os.Stat(gitignorePath); os.IsExist(err) || !pathfile.IsDir() {
+	if pathfile, err := os.Stat(gitignorePath); err != nil || !pathfile.IsDir() {
 		ignorePattern, _ = ignore.CompileIgnoreFile(gitignorePath)
 		hasIgnoreFile = true
 	}
 
-	if pathfile, err := os.Stat(dockerignorePath); os.IsExist(err) || !pathfile.IsDir() {
+	if pathfile, err := os.Stat(dockerignorePath); err != nil || !pathfile.IsDir() {
 		ignorePattern, _ = ignore.CompileIgnoreFile(dockerignorePath)
 		hasIgnoreFile = true
 	}

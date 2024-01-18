@@ -118,9 +118,13 @@ func embedProjectFiles(directory string, newFile *os.File) {
 			if relativePath == "Dockerfile" {
 				isSkip = true
 			}
-			if isSkip || info.IsDir() {
+			if isSkip {
 				return nil
 			}
+		}
+
+		if info.IsDir() {
+			return nil
 		}
 
 		fileContent, err := os.ReadFile(path)

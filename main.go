@@ -16,45 +16,44 @@ import (
 )
 
 var ignorePattern *ignore.GitIgnore
-var hasIgnoreFile bool = false
 
 func main() {
-	dockerfilePath := flag.String("path", ".", "Path to the directory containing the Dockerfile")
+	dockerfilePath := ""
+	flag.StringVar(&dockerfilePath, "path", ".", "Path to the directory containing the Dockerfile")
 	flag.Parse()
 
-	fullDockerfilePath := filepath.Join(*dockerfilePath, "Dockerfile")
-	gitignorePath := filepath.Join(*dockerfilePath, ".gitignore")
-	dockerignorePath := filepath.Join(*dockerfilePath, ".dockerignore")
+	fullDockerfilePath := filepath.Join(dockerfilePath, "Dockerfile")
+	gitignorePath := filepath.Join(dockerfilePath, ".gitignore")
+	dockerignorePath := filepath.Join(dockerfilePath, ".dockerignore")
 
 	if pathfile, err := os.Stat(gitignorePath); err != nil || !pathfile.IsDir() {
 		ignorePattern, _ = ignore.CompileIgnoreFile(gitignorePath)
-		hasIgnoreFile = true
 	}
 
 	if pathfile, err := os.Stat(dockerignorePath); err != nil || !pathfile.IsDir() {
 		ignorePattern, _ = ignore.CompileIgnoreFile(dockerignorePath)
-		hasIgnoreFile = true
 	}
 
 	file, err := os.Open(fullDockerfilePath)
 	if err != nil {
-		fmt.Printf("Error opening Dockerfile in %s: %s\n", *dockerfilePath, err)
+		fmt.Printf("Error opening Dockerfile in %s: %s\n", dockerfilePath, err)
 		return
 	}
 	defer file.Close()
 
-	newFilePath := filepath.Join(*dockerfilePath, "Dockerfile.script")
+	newFilePath := filepath.Join(dockerfilePath, "Dockerfile.script")
 	newFile, err := os.Create(newFilePath)
 	if err != nil {
-		fmt.Printf("Error creating Dockerfile.script in %s: %s\n", *dockerfilePath, err)
+		fmt.Printf("Error creating Dockerfile.script in %s: %s\n", dockerfilePath, err)
 		return
 	}
 	defer newFile.Close()
 
 	writeShebang(newFile)
-	copyDockerfileContent(file, newFile, *dockerfilePath)
+	fmt.Println(dockerfilePath)
+	copyDockerfileContent(file, newFile, dockerfilePath)
 
-	fmt.Printf("Dockerfile.script created successfully in %s\n", *dockerfilePath)
+	fmt.Printf("Dockerfile.script created successfully in %s\n", dockerfilePath)
 }
 
 func writeShebang(file *os.File) {
@@ -113,7 +112,7 @@ func embedProjectFiles(directory string, newFile *os.File) {
 			return err
 		}
 
-		if hasIgnoreFile {
+		if ignorePattern != nil {
 			// Ignore files based on .dockerignore patterns
 			isSkip := ignorePattern.MatchesPath(relativePath)
 			if relativePath == "Dockerfile" {

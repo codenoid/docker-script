@@ -15,16 +15,25 @@ import (
 	ignore "github.com/sabhiram/go-gitignore"
 )
 
+var ignorePattern *ignore.GitIgnore
+var hasIgnoreFile bool = false
+
 func main() {
 	dockerfilePath := flag.String("path", ".", "Path to the directory containing the Dockerfile")
 	flag.Parse()
 
 	fullDockerfilePath := filepath.Join(*dockerfilePath, "Dockerfile")
+	gitignorePath := filepath.Join(*dockerfilePath, ".gitignore")
 	dockerignorePath := filepath.Join(*dockerfilePath, ".dockerignore")
 
-	ignoredPatterns := ignore.CompileIgnoreLines()
-	if pathfile, err := os.Stat(fullDockerfilePath); os.IsExist(err) || !pathfile.IsDir() {
-		ignoredPatterns, _ = ignore.CompileIgnoreFile(dockerignorePath)
+	if pathfile, err := os.Stat(gitignorePath); os.IsExist(err) || !pathfile.IsDir() {
+		ignorePattern, _ = ignore.CompileIgnoreFile(gitignorePath)
+		hasIgnoreFile = true
+	}
+
+	if pathfile, err := os.Stat(dockerignorePath); os.IsExist(err) || !pathfile.IsDir() {
+		ignorePattern, _ = ignore.CompileIgnoreFile(dockerignorePath)
+		hasIgnoreFile = true
 	}
 
 	file, err := os.Open(fullDockerfilePath)
@@ -43,7 +52,7 @@ func main() {
 	defer newFile.Close()
 
 	writeShebang(newFile)
-	copyDockerfileContent(file, newFile, ignoredPatterns, *dockerfilePath)
+	copyDockerfileContent(file, newFile, *dockerfilePath)
 
 	fmt.Printf("Dockerfile.script created successfully in %s\n", *dockerfilePath)
 }
@@ -52,7 +61,7 @@ func writeShebang(file *os.File) {
 	fmt.Fprintln(file, `#!/usr/bin/env -S bash -c "docker run --network host -it --rm \$(docker build --progress plain -f \$0 . 2>&1 | tee /dev/stderr | grep 'writing image sha256:' | grep -oP 'sha256:[0-9a-f]+' | cut -d' ' -f1)"`)
 }
 
-func copyDockerfileContent(originalFile *os.File, newFile *os.File, ignorePattern *ignore.GitIgnore, directory string) error {
+func copyDockerfileContent(originalFile *os.File, newFile *os.File, directory string) error {
 	scanner := bufio.NewScanner(originalFile)
 	fromCopied := false
 	copyBefore := ""
@@ -85,7 +94,7 @@ APPEND:
 				fromCopied = true
 
 				// After copying FROM line, embed project files
-				embedProjectFiles(directory, ignorePattern, newFile)
+				embedProjectFiles(directory, newFile)
 			}
 		}
 	}
@@ -93,7 +102,7 @@ APPEND:
 	return scanner.Err()
 }
 
-func embedProjectFiles(directory string, ignorePattern *ignore.GitIgnore, newFile *os.File) {
+func embedProjectFiles(directory string, newFile *os.File) {
 	err := filepath.Walk(directory, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -104,13 +113,15 @@ func embedProjectFiles(directory string, ignorePattern *ignore.GitIgnore, newFil
 			return err
 		}
 
-		// Ignore files based on .dockerignore patterns
-		isSkip := ignorePattern.MatchesPath(relativePath)
-		if relativePath == "Dockerfile" {
-			isSkip = true
-		}
-		if isSkip || info.IsDir() {
-			return nil
+		if hasIgnoreFile {
+			// Ignore files based on .dockerignore patterns
+			isSkip := ignorePattern.MatchesPath(relativePath)
+			if relativePath == "Dockerfile" {
+				isSkip = true
+			}
+			if isSkip || info.IsDir() {
+				return nil
+			}
 		}
 
 		fileContent, err := os.ReadFile(path)
